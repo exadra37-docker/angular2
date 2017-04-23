@@ -30,6 +30,10 @@ To uninstall just follow detailed instructions from [here](docs/how-to/uninstall
 
 See usage examples [here](docs/how-to/use.md).
 
+## EXAMPLES
+
+* [Hello Docker Compose APP](https://gitlab.com/exadra37-docker-compose/angular2/blob/master/docs/examples/hello-docker-compose-app.md).
+
 
 ## CONTRIBUTING IN ISSUES / MERGE REQUESTS
 
