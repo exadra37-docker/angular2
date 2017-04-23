@@ -1,0 +1,139 @@
+version: "2.1"
+
+services:
+
+########################################################################################################################
+# VOLUMES
+########################################################################################################################
+#
+# Container services that only serve as Volumes.
+#
+####
+
+  # This image is only a Volume to contain all the files in our workspace folder.
+  #
+  # Used by Angular CLI and New App containers
+  workspace:
+    image: ${VOLUME_IMAGE}
+    volumes:
+      - ${WORKSPACE_DIR}:/home/node/workspace
+
+  # This image will contain the Volume with only the App Code files.
+  #
+  # Use by App Dev and App Prod containers
+  app-code:
+    image: ${VOLUME_IMAGE}
+    volumes:
+      - ${APP_CODE_DIR}:/home/node/workspace
+
+
+########################################################################################################################
+# DEVELOPMENT
+########################################################################################################################
+#
+# All Services to run in Development.
+#
+####
+
+  # Build easily the skeleton for a New App.
+  new-app:
+    image: ${ANGULAR_CLI_IMAGE}
+    user: ${CONTAINER_USER}
+    volumes_from:
+      - workspace
+    entrypoint: ${NEW_APP_ENTRYPOINT}
+    command: ${NEW_APP_DEFAULT_NAME}
+
+  # The Angular CLI Container from where we can run `ng`, `npm` or any other shell command.
+  angular-cli:
+    image: ${ANGULAR_CLI_IMAGE}
+    user: ${CONTAINER_USER}
+    ports:
+      - ${ANGULAR_CLI_PORTS_MAP}
+    volumes_from:
+      - workspace
+
+  # The container to run our web interface in development mode.
+  web-dev:
+    image: ${WEB_IMAGE_DEV}
+    user: ${CONTAINER_USER}
+    labels:
+      - "traefik.protocol=${TRAEFIK_PROTOCOL_DEV}"
+      - "traefik.port=${TRAEFIK_PORT_DEV}"
+      - "traefik.backend=${HOST_NAME_DEV}"
+      - "traefik.frontend.rule=Host:${HOST_NAME_DEV}.${DOMAIN_NAME_DEV}"
+    ports:
+      - ${HOST_PORT_MAP_DEV}
+    volumes_from:
+      - app-code
+    command: "${WEB_DEV_COMMAND}"
+
+  # Builds a Container that gives us a NODE CLI interface.
+  node-cli:
+    image: ${ANGULAR_CLI_IMAGE}
+    entrypoint: node
+
+  # Just useful if you want to take a look how things are set-up at root level.
+  # Any change done here will not affect the other containers.
+  root-user:
+    image: ${ANGULAR_CLI_IMAGE}
+    working_dir: /
+
+
+########################################################################################################################
+# PRODUCTION
+########################################################################################################################
+#
+# All Container Services related with Production.
+#
+####
+
+  # Buils our App to run in Production.
+  app-build-prod:
+    image: ${ANGULAR_CLI_IMAGE}
+    user: ${CONTAINER_USER}
+    volumes_from:
+      - app-code
+    entrypoint: ${APP_BUILD_PROD_ENTRYPOINT}
+    healthcheck:
+        # We to check that command `ng build -prod` finishes successfully.
+        # This healthy check will allow that other Services depending on this on just start when this check is true.
+        test: "exit 0"
+
+  # Runs our App in production mode, using a server like Nginx or any other of our preference.
+  web-prod:
+    image: ${WEB_IMAGE_PROD}
+    environment:
+      - NGINX_HOST=${HOST_NAME_PROD}.${DOMAIN_NAME_PROD}
+    depends_on:
+      app-build-prod:
+        # We need to wait that command `ng build -prod` finishes successfully in order to start this Container.
+        condition: service_healthy
+    ports:
+      - ${HOST_PORT_MAP_PROD}
+    volumes:
+      - ${APP_DIR_PROD}:/usr/share/nginx/html
+    labels:
+      - "traefik.protocol=${TRAEFIK_PROTOCOL_PROD}"
+      - "traefik.port=${TRAEFIK_PORT_PROD}"
+      - "traefik.backend=${HOST_NAME_PROD}"
+      - "traefik.frontend.rule=Host:${HOST_NAME_PROD}.${DOMAIN_NAME_PROD}"
+
+
+########################################################################################################################
+# NETWORKS
+########################################################################################################################
+#
+# The networks to be used by the Containers.
+#
+# Attach all services to the traefik_network so that we can run several containers in same host,
+#  without port numbers in the Url.
+#
+# @link https://traefik.io
+#
+####
+
+networks:
+  default:
+    external:
+      name: traefik_network
