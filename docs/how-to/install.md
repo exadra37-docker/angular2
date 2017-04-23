@@ -27,5 +27,5 @@ git clone git@gitlab.com:exadra37-docker-compose/angular2.git docker/angular2
 
 Ready to start using it:
 
-* Try the [Hello Docker Compose](https://gitlab.com/exadra37-docker-compose/angular2/blob/master/docs/examples/hello-docker-compose.md) example.
+* Try the [Hello Docker Compose](https://gitlab.com/exadra37-docker-compose/angular2/blob/master/docs/examples/hello-docker-compose-app.md) example.
 * See how to use [here](https://gitlab.com/exadra37-docker-compose/angulare/blob/master/docs/how-to/use.md).
